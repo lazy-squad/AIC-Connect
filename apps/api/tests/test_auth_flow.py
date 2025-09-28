@@ -22,12 +22,19 @@ async def test_signup_and_me_flow(client: AsyncClient, session: AsyncSession) ->
   payload = response.json()
   assert payload["email"] == "signup@example.com"
   assert payload["displayName"] == "Sign Up"
+  assert payload["username"] == "signup"
+  assert payload["expertiseTags"] == []
+  assert payload["usernameEditable"] is True
+  assert payload["githubUsername"] is None
   assert client.cookies.get(settings.session_cookie.name) is not None
 
   me_response = await client.get("/me")
   assert me_response.status_code == 200
   me_payload = me_response.json()
   assert me_payload["email"] == "signup@example.com"
+  assert me_payload["username"] == "signup"
+  assert me_payload["usernameEditable"] is True
+  assert me_payload["githubUsername"] is None
 
   # Ensure database user exists
   user_count = await session.scalar(select(func.count()).select_from(User))
@@ -66,7 +73,10 @@ async def test_login_success_and_logout(client: AsyncClient) -> None:
     json={"email": "login@example.com", "password": "Sup3rSecure!"},
   )
   assert login_response.status_code == 200
-  assert login_response.json()["email"] == "login@example.com"
+  login_payload = login_response.json()
+  assert login_payload["email"] == "login@example.com"
+  assert login_payload["username"] == "login"
+  assert login_payload["githubUsername"] is None
   assert client.cookies.get(settings.session_cookie.name) is not None
 
   logout_response = await client.post("/auth/logout")
@@ -114,6 +124,7 @@ async def test_github_callback_links_existing_user(
     email="oauth@example.com",
     password_hash=hash_password("Sup3rSecure!"),
     display_name="Existing",
+    username="existing",
   )
   session.add(existing_user)
   await session.commit()
@@ -128,7 +139,7 @@ async def test_github_callback_links_existing_user(
 
   async def fake_fetch(self: GitHubOAuthClient, token: str) -> GitHubProfile:  # pragma: no cover - simple stub
     assert token == "token"
-    return GitHubProfile(id="123", email="oauth@example.com", login="oauth", name="OAuth User")
+    return GitHubProfile(id="123", email="oauth@example.com", login="oauth", name="OAuth User", avatar_url="https://avatars.example/oauth.png")
 
   monkeypatch.setattr(GitHubOAuthClient, "exchange_code", fake_exchange)
   monkeypatch.setattr(GitHubOAuthClient, "fetch_profile", fake_fetch)
@@ -141,6 +152,9 @@ async def test_github_callback_links_existing_user(
   oauth_account = await session.scalar(select(OAuthAccount).where(OAuthAccount.provider == OAuthProvider.GITHUB))
   assert oauth_account is not None
   assert oauth_account.user_id == existing_user.id
+  await session.refresh(existing_user)
+  assert existing_user.github_username == "oauth"
+  assert existing_user.avatar_url == "https://avatars.example/oauth.png"
 
 
 @pytest.mark.asyncio
@@ -162,7 +176,7 @@ async def test_github_callback_creates_user_when_missing(
     return "token-create"
 
   async def fake_fetch(self: GitHubOAuthClient, token: str) -> GitHubProfile:
-    return GitHubProfile(id="456", email="new-oauth@example.com", login="new", name="New OAuth")
+    return GitHubProfile(id="456", email="new-oauth@example.com", login="new", name="New OAuth", avatar_url="https://avatars.example/new.png")
 
   monkeypatch.setattr(GitHubOAuthClient, "exchange_code", fake_exchange)
   monkeypatch.setattr(GitHubOAuthClient, "fetch_profile", fake_fetch)
@@ -173,6 +187,9 @@ async def test_github_callback_creates_user_when_missing(
 
   new_user = await session.scalar(select(User).where(User.email == "new-oauth@example.com"))
   assert new_user is not None
+  assert new_user.username == "new-oauth"
+  assert new_user.github_username == "new"
+  assert new_user.avatar_url == "https://avatars.example/new.png"
 
   oauth_account = await session.scalar(select(OAuthAccount).where(OAuthAccount.provider_account_id == "456"))
   assert oauth_account is not None

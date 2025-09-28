@@ -12,6 +12,7 @@ from .db import dispose_engine, verify_database_connection
 from .routes.auth import router as auth_router
 from .routes.health import router as health_router
 from .routes.me import router as me_router
+from .routes.users import router as users_router
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +50,7 @@ app.add_middleware(
 
 app.include_router(health_router)
 app.include_router(auth_router)
+app.include_router(users_router)
 app.include_router(me_router)
 
 

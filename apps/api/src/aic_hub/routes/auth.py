@@ -27,7 +27,8 @@ from ..security import (
   session_tokens,
   verify_password,
 )
-from ..schemas import PublicUser
+from ..schemas import PrivateUserProfile
+from ..usernames import generate_unique_username, is_username_generated_from_email
 
 logger = logging.getLogger(__name__)
 
@@ -101,17 +102,32 @@ def _decode_state(raw: str) -> str:
   return data["state"]
 
 
-def _to_public_user(user: User) -> PublicUser:
-  return PublicUser(id=user.id, email=user.email, displayName=user.display_name)
+async def _to_private_user(session: AsyncSession, user: User) -> PrivateUserProfile:
+  username_editable = await is_username_generated_from_email(session, user)
+  return PrivateUserProfile(
+    id=user.id,
+    email=user.email,
+    username=user.username,
+    display_name=user.display_name,
+    avatar_url=user.avatar_url,
+    bio=user.bio,
+    company=user.company,
+    location=user.location,
+    expertise_tags=list(user.expertise_tags or []),
+    created_at=user.created_at,
+    updated_at=user.updated_at,
+    username_editable=username_editable,
+    github_username=user.github_username,
+  )
 
 
-@router.post("/signup", response_model=PublicUser, status_code=status.HTTP_201_CREATED)
+@router.post("/signup", response_model=PrivateUserProfile, status_code=status.HTTP_201_CREATED)
 async def signup(
   payload: SignupPayload,
   request: Request,
   response: Response,
   session: Annotated[AsyncSession, Depends(get_db_session)],
-) -> PublicUser:
+) -> PrivateUserProfile:
   request_id = _ensure_request_id(request)
   email = normalize_email(payload.email)
   email_hash = hash_email(email)
@@ -189,7 +205,13 @@ async def signup(
     raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=SIGNUP_GENERIC_ERROR)
 
   password_hash = hash_password(password)
-  user = User(email=email, password_hash=password_hash, display_name=payload.display_name.strip() if payload.display_name else None)
+  generated_username = await generate_unique_username(session, email)
+  user = User(
+    email=email,
+    password_hash=password_hash,
+    display_name=payload.display_name.strip() if payload.display_name else None,
+    username=generated_username,
+  )
   session.add(user)
   await session.flush()
 
@@ -212,16 +234,17 @@ async def signup(
   )
 
   _set_session_cookie(response, token)
-  return _to_public_user(user)
+  await session.refresh(user)
+  return await _to_private_user(session, user)
 
 
-@router.post("/login", response_model=PublicUser)
+@router.post("/login", response_model=PrivateUserProfile)
 async def login(
   payload: LoginPayload,
   request: Request,
   response: Response,
   session: Annotated[AsyncSession, Depends(get_db_session)],
-) -> PublicUser:
+) -> PrivateUserProfile:
   request_id = _ensure_request_id(request)
   email = normalize_email(payload.email)
   email_hash = hash_email(email)
@@ -304,7 +327,8 @@ async def login(
   )
 
   _set_session_cookie(response, token)
-  return _to_public_user(user)
+  await session.refresh(user)
+  return await _to_private_user(session, user)
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
@@ -427,7 +451,15 @@ async def github_callback(
       action = "oauth_linked"
     else:
       display_name = profile.name or profile.login
-      user = User(email=normalized_email, password_hash=None, display_name=display_name)
+      generated_username = await generate_unique_username(session, normalized_email)
+      user = User(
+        email=normalized_email,
+        password_hash=None,
+        display_name=display_name,
+        username=generated_username,
+        github_username=profile.login,
+        avatar_url=profile.avatar_url,
+      )
       session.add(user)
       await session.flush()
       oauth_account = OAuthAccount(
@@ -438,7 +470,21 @@ async def github_callback(
       session.add(oauth_account)
       action = "oauth_created"
 
+  # Update GitHub-linked profile data on each callback.
+  profile_mutated = False
+  if profile.login and user.github_username != profile.login:
+    user.github_username = profile.login
+    profile_mutated = True
+  if profile.avatar_url and user.avatar_url != profile.avatar_url:
+    user.avatar_url = profile.avatar_url
+    profile_mutated = True
+  if profile.name and not user.display_name:
+    user.display_name = profile.name
+    profile_mutated = True
+
   user.last_login = datetime.now(tz=UTC)
+  if profile_mutated:
+    user.updated_at = datetime.now(tz=UTC)
   await session.flush()
   await session.commit()
 

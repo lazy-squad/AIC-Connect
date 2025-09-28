@@ -1,67 +1,33 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-type CurrentUser = {
-  email: string;
-  displayName?: string | null;
-};
+import { useCurrentUser } from "../hooks/use-current-user";
 
 export function Header() {
-  const [user, setUser] = useState<CurrentUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const { data: user, error: userError, mutate, isValidating } = useCurrentUser();
+  const [logoutError, setLogoutError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let active = true;
-    const loadUser = async () => {
-      try {
-        const response = await fetch("/api/me", { credentials: "include" });
-        if (!response.ok) {
-          if (!active) return;
-          setUser(null);
-          return;
-        }
-        const data = (await response.json()) as CurrentUser;
-        if (active) {
-          setUser(data);
-        }
-      } catch {
-        if (active) {
-          setUser(null);
-        }
-      } finally {
-        if (active) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    void loadUser();
-
-    return () => {
-      active = false;
-    };
-  }, []);
+  const isLoading = user === undefined && !userError && isValidating;
 
   const handleLogout = async () => {
-    setError(null);
+    setLogoutError(null);
     try {
       const response = await fetch("/api/auth/logout", {
         method: "POST",
         credentials: "include",
       });
       if (!response.ok) {
-        setError("Logout failed. Please try again.");
+        setLogoutError("Logout failed. Please try again.");
         return;
       }
-      setUser(null);
+      await mutate(null, { revalidate: false });
       router.refresh();
     } catch {
-      setError("Logout failed. Please try again.");
+      setLogoutError("Logout failed. Please try again.");
     }
   };
 
@@ -75,10 +41,22 @@ export function Header() {
         {isLoading ? (
           <span className="text-xs text-slate-500">Loading session…</span>
         ) : user ? (
-          <div className="flex items-center gap-3 text-sm text-slate-200">
+          <nav className="flex items-center gap-4 text-sm text-slate-200">
             <span>
-              Signed in as {user.displayName?.trim() || user.email}
+              Signed in as {user.displayName?.trim() || `@${user.username}`}
             </span>
+            <Link
+              href={`/users/${user.username}`}
+              className="rounded-md border border-slate-800 px-3 py-1 text-xs font-medium text-slate-200 transition hover:border-slate-500 hover:bg-slate-800"
+            >
+              View profile
+            </Link>
+            <Link
+              href="/settings/profile"
+              className="rounded-md border border-slate-800 px-3 py-1 text-xs font-medium text-slate-200 transition hover:border-slate-500 hover:bg-slate-800"
+            >
+              Edit profile
+            </Link>
             <button
               type="button"
               onClick={handleLogout}
@@ -86,7 +64,9 @@ export function Header() {
             >
               Log out
             </button>
-          </div>
+          </nav>
+        ) : userError ? (
+          <span className="text-xs text-red-300">Unable to load session</span>
         ) : (
           <nav className="flex items-center gap-4 text-sm">
             <Link href="/auth/login" className="text-slate-300 hover:text-white">
@@ -101,7 +81,7 @@ export function Header() {
           </nav>
         )}
       </div>
-      {error ? <p className="bg-red-500/10 px-6 py-2 text-center text-xs text-red-200">{error}</p> : null}
+      {logoutError ? <p className="bg-red-500/10 px-6 py-2 text-center text-xs text-red-200">{logoutError}</p> : null}
     </header>
   );
 }

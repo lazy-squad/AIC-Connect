@@ -1,6 +1,6 @@
 # AIC HUB MVP Scaffolding
 
-Secure onboarding scaffold with a Next.js web front-end and FastAPI backend running on a shared HTTP origin in local development. Basic email + password accounts, session cookies, and GitHub OAuth are all wired end-to-end.
+Secure onboarding scaffold with a Next.js web front-end and FastAPI backend running on a shared HTTP origin in local development. Email + password accounts, session cookies, GitHub OAuth, and editable user profiles are all wired end-to-end.
 
 ## Prerequisites
 - **Node.js 20 LTS** (with `corepack` for pnpm) and **pnpm 9+**
@@ -48,13 +48,51 @@ Secure onboarding scaffold with a Next.js web front-end and FastAPI backend runn
 
 ## FastAPI Endpoints
 - `GET /health` — returns `{ "status": "ok" }`.
-- `POST /auth/signup` — creates a user, sets the session cookie, responds with the public profile.
+- `POST /auth/signup` — creates a user, sets the session cookie, responds with the private profile payload.
 - `POST /auth/login` — verifies credentials, issues a fresh session cookie.
 - `POST /auth/logout` — clears the session cookie.
 - `GET /auth/login/github` — redirects to GitHub OAuth with CSRF-protected state.
 - `GET /auth/callback/github` — exchanges the code, links or creates the user, and redirects back to `/welcome`.
-- `GET /me` — returns the authenticated user or `401` if unauthenticated.
+- `GET /users/me` — returns the authenticated user’s private profile (alias `/me` maintained for backward compatibility).
+- `PATCH /users/me` — updates display name, bio, company, location, expertise tags, and (once) username.
+- `GET /users/{username}` — public profile without email or session metadata.
+- `GET /users` — lists public profiles; supports `q` (username/display name search), `tag` (expertise filter), and `limit`/`offset` pagination.
 - `GET /config/cookie` — exposes cookie defaults for the web UI.
+
+## Profile API Usage
+
+- Usernames are lowercase slugs (`a-z`, `0-9`, `-`, length 3–32). New accounts receive an email-derived slug that can be changed once; afterward the field is locked server-side.
+- Expertise tags are validated against a fixed list and stored as a Postgres `TEXT[]` (mirrored as JSON when running SQLite-backed tests).
+- Private profile responses include `usernameEditable` and `githubUsername` to drive the settings UI.
+
+### Allowed Expertise Tags
+
+`LLMs`, `RAG`, `Agents`, `Fine-tuning`, `Prompting`, `Vector DBs`, `Embeddings`, `Training`, `Inference`, `Ethics`, `Safety`, `Benchmarks`, `Datasets`, `Tools`, `Computer Vision`, `NLP`, `Speech`, `Robotics`, `RL`
+
+### Example Requests
+
+```bash
+# Fetch the authenticated profile (replace the cookie placeholder after signing in)
+curl http://localhost:3000/api/users/me \
+  --cookie "aic_hub_session=<token>"
+
+# Update profile details and username (allowed once per account)
+curl http://localhost:3000/api/users/me \
+  --cookie "aic_hub_session=<token>" \
+  -H "Content-Type: application/json" \
+  -X PATCH \
+  -d '{
+    "displayName": "Builder One",
+    "username": "builder-01",
+    "bio": "Exploring applied AI.",
+    "company": "AIC Ventures",
+    "location": "Remote",
+    "expertiseTags": ["LLMs", "Agents"]
+  }'
+
+# Read a public profile anonymously
+curl http://localhost:3000/api/users/builder-01
+```
 
 ## Authentication
 

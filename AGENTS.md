@@ -3,7 +3,7 @@
 > This repository implements the AIC HUB MVP described in `prd.md`. Use this guide for day-to-day development, reviews, and automation.
 
 ## Project Structure & Module Organization
-- `apps/web` — Next.js (App Router, Tailwind) PWA served over HTTP with rewrites to the API during development.
+- `apps/web` — Next.js (App Router, Tailwind) PWA served over HTTP with rewrites to the API during development. Profile forms live under `src/app/settings/profile` with shared hooks in `src/hooks` and tag constants in `src/constants`.
 - `apps/api` — FastAPI (Python 3.11+, uv, SQLAlchemy 2) REST gateway with placeholder auth endpoints.
 - `packages/*` — shared TypeScript libraries (reserved for future work).
 - `docker/` — Docker Compose for the local Postgres stack.
@@ -26,9 +26,8 @@
 - Imports sorted automatically via tooling (ESLint/Prettier on TS, `isort` not configured yet—keep blocks grouped manually).
 - React components use PascalCase; files use `kebab-case.tsx`. Python modules use `snake_case`.
 
-## Testing Guidelines
-- API: Pytest (async) in `apps/api/tests`. Keep HTTP clients on the HTTP scheme and stub external integrations.
-- Web: Playwright smoke specs in `apps/web/tests`. Exercise routes over `http://localhost:3000` and rely on `/api` rewrites.
+- API: Pytest (async) in `apps/api/tests`. Keep HTTP clients on the HTTP scheme and stub external integrations. Profile coverage lives in `test_users.py` (username lock, tag validation, public lookups).
+- Web: Playwright smoke specs in `apps/web/tests`. Exercise routes over `http://localhost:3000` and rely on `/api` rewrites. The profile e2e flow is covered in `profile.spec.ts` (settings form + public page).
 - Aim for ≥80% coverage once features mature. Run `pnpm test -- --coverage` when coverage gates are reintroduced.
 - Seed deterministic data in Postgres fixtures (none required yet). Avoid external network calls.
 
@@ -45,6 +44,7 @@
 - Local dev uses HTTP only; same-origin via Next.js rewrites; no Redis, no WebSockets, no TLS in app.
 - Local dev uses HTTP; set `SESSION_SECURE=false`. In staging/production behind TLS, set `SESSION_SECURE=true`. Keep `httpOnly=true` and `SameSite=Lax` in all environments.
 - Backend currently depends only on Postgres (no Redis/WebSockets/SMTP in MVP); magic links log to console during development.
+- Profile API constraints: usernames are immutable after manual set (lowercase `a-z`, `0-9`, `-`, 3–32 chars) and expertise tags must come from the fixed AI tag list (`LLMs`, `RAG`, `Agents`, … `RL`). Keep the list in sync across API and web constants.
 
 ## Agent-Specific Instructions
 - Scope: this file applies repo-wide; nested `AGENTS.md` (if any) takes precedence.

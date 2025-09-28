@@ -27,7 +27,7 @@ test("signup page enforces password hints client-side", async ({ page }) => {
   await page.getByLabel("Password").fill("short");
   await page.getByRole("button", { name: "Create account" }).click();
 
-  await expect(page.getByRole("alert")).toContainText("Use at least 8 characters");
+  await expect(page.locator('p[role="alert"]')).toContainText("Use at least 8 characters");
 });
 
 test("login page provides navigation to GitHub OAuth", async ({ page }) => {
