@@ -41,6 +41,7 @@
 ## Security & Configuration Tips
 - Never commit secrets. Use `.env`/`.env.local`; keep `.env.example` current when adding vars.
 - Expected envs: `WEB_BASE_URL`, `API_BASE_URL`, `ALLOWED_ORIGIN`, `DATABASE_URL`, `SECRET_KEY`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `TOKEN_EXP_MINUTES`, `SESSION_MAX_AGE_DAYS`, `NEXT_PUBLIC_API_BASE_URL`, `API_INTERNAL_URL`.
+- Optional envs: `PASSWORD_MIN_LENGTH` to bump password policy without changing code.
 - Local dev uses HTTP only; same-origin via Next.js rewrites; no Redis, no WebSockets, no TLS in app.
 - Local dev uses HTTP; set `SESSION_SECURE=false`. In staging/production behind TLS, set `SESSION_SECURE=true`. Keep `httpOnly=true` and `SameSite=Lax` in all environments.
 - Backend currently depends only on Postgres (no Redis/WebSockets/SMTP in MVP); magic links log to console during development.
@@ -48,4 +49,5 @@
 ## Agent-Specific Instructions
 - Scope: this file applies repo-wide; nested `AGENTS.md` (if any) takes precedence.
 - Before large edits: share a brief plan, prefer minimal diffs, and update docs/tests alongside code.
+- Authentication is now fully implemented; avoid reintroducing placeholder flows. Keep rate limits and session issuance intact when modifying auth.
 - Use `rg` for search; read files in ≤250-line chunks; keep patches surgical.

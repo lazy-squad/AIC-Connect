@@ -4,6 +4,7 @@ from functools import lru_cache
 from typing import Literal
 
 from pydantic import AnyHttpUrl, Field, SecretStr
+from pydantic.functional_validators import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -37,8 +38,14 @@ class Settings(BaseSettings):
 
   token_exp_minutes: int = Field(default=15, alias="TOKEN_EXP_MINUTES")
   session_max_age_days: int = Field(default=7, alias="SESSION_MAX_AGE_DAYS")
+  password_min_length: int = Field(default=8, alias="PASSWORD_MIN_LENGTH")
 
   session_cookie: SessionCookieConfig = SessionCookieConfig()
+
+  @model_validator(mode="after")
+  def _sync_cookie_config(self) -> "Settings":
+    self.session_cookie.max_age_seconds = self.session_max_age_days * 24 * 60 * 60
+    return self
 
   @property
   def async_database_url(self) -> str:
@@ -51,6 +58,17 @@ class Settings(BaseSettings):
   @property
   def cors_origins(self) -> list[str]:
     return [str(self.allowed_origin)]
+
+  @property
+  def session_cookie_kwargs(self) -> dict[str, object]:
+    cookie = self.session_cookie
+    return {
+      "max_age": cookie.max_age_seconds,
+      "httponly": cookie.http_only,
+      "secure": cookie.secure,
+      "samesite": cookie.same_site,
+      "path": "/",
+    }
 
 
 @lru_cache(maxsize=1)

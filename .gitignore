@@ -18,6 +18,8 @@ build/
 out/
 .vercel/
 *.tsbuildinfo
+__pycache__/
+*.pyc
 
 # --- Logs & Reports ---
 logs/

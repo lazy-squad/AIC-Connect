@@ -12,14 +12,15 @@ export default function WelcomePage() {
         </Link>
         <h1 className="text-4xl font-semibold tracking-tight text-slate-50">Welcome to AIC HUB</h1>
         <p className="text-base text-slate-300">
-          You successfully reached the welcome page scaffold. OAuth callbacks and magic links are placeholders
-          for now—track the FastAPI logs to observe requests. When onboarding is ready, this page will outline
-          provider-specific steps and workspace provisioning status.
+          Authentication is now live. Email + password accounts issue Argon2id-backed session cookies, and GitHub SSO
+          links or provisions users automatically. Review the notes below before connecting providers or inviting your
+          team.
         </p>
         <ul className="list-disc space-y-2 pl-6 text-sm text-slate-300">
-          <li>GitHub OAuth flows redirect through the FastAPI backend.</li>
-          <li>Magic link emails are written to development logs instead of being sent.</li>
-          <li>Local development runs over HTTP on http://localhost:3000 with Next.js rewrites to the FastAPI backend.</li>
+          <li>Sessions use an HttpOnly cookie (`SameSite=Lax`, `Secure=false` in local HTTP) and expire after seven days.</li>
+          <li>Signup and login endpoints enforce per-email/IP rate limits to reduce credential stuffing.</li>
+          <li>GitHub OAuth never stores access tokens—only the provider account ID.</li>
+          <li>All flows run over the shared origin http://localhost:3000 via Next.js rewrites to the FastAPI backend.</li>
         </ul>
       </div>
     </main>

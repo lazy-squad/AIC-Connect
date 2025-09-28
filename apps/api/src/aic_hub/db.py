@@ -43,6 +43,13 @@ async def lifespan_session() -> AsyncIterator[AsyncSession]:
     yield session
 
 
+async def get_db_session() -> AsyncIterator[AsyncSession]:
+  """Yield a database session for request-scoped dependencies."""
+  async_session = get_session_factory()
+  async with async_session() as session:
+    yield session
+
+
 async def verify_database_connection() -> None:
   async with get_engine().begin() as connection:
     await connection.run_sync(lambda _: None)
