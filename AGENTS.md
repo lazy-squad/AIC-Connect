@@ -8,7 +8,7 @@
 - `packages/*` — shared TypeScript libraries (reserved for future work).
 - `docker/` — Docker Compose for the local Postgres stack.
 - `tests/` — reserved for cross-package end-to-end fixtures when needed (current smoke tests live beside each app).
-- `scripts/` — developer and ops helpers (e.g., mkcert bootstrap).
+- `scripts/` — developer and ops helpers.
 
 ## Build, Test, and Development Commands
 - Install toolchain: `corepack enable && pnpm install --frozen-lockfile` plus `uv` for Python dependencies.
@@ -42,7 +42,7 @@
 - Never commit secrets. Use `.env`/`.env.local`; keep `.env.example` current when adding vars.
 - Expected envs: `WEB_BASE_URL`, `API_BASE_URL`, `ALLOWED_ORIGIN`, `DATABASE_URL`, `SECRET_KEY`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `TOKEN_EXP_MINUTES`, `SESSION_MAX_AGE_DAYS`, `NEXT_PUBLIC_API_BASE_URL`, `API_INTERNAL_URL`.
 - Local dev uses HTTP only; same-origin via Next.js rewrites; no Redis, no WebSockets, no TLS in app.
-- Dev cookies must remain `httpOnly`, `Secure`, `SameSite=Lax`. HSTS stays disabled for local.
+- Local dev uses HTTP; set `SESSION_SECURE=false`. In staging/production behind TLS, set `SESSION_SECURE=true`. Keep `httpOnly=true` and `SameSite=Lax` in all environments.
 - Backend currently depends only on Postgres (no Redis/WebSockets/SMTP in MVP); magic links log to console during development.
 
 ## Agent-Specific Instructions

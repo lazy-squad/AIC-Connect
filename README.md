@@ -28,6 +28,8 @@ Secure onboarding scaffold with a Next.js web front-end and FastAPI backend runn
    ```
 6. Open the app at [http://localhost:3000](http://localhost:3000). The FastAPI health check is available through the same origin at [http://localhost:3000/api/health](http://localhost:3000/api/health).
 
+> Local is HTTP-only; set `SESSION_SECURE=false`. In TLS environments, set `SESSION_SECURE=true`.
+
 ## Development Scripts
 - `pnpm dev:web` — run only the Next.js dev server on http://localhost:3000.
 - `pnpm dev:api` — run only the FastAPI server via `uvicorn` on http://localhost:4000.

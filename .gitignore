@@ -47,3 +47,4 @@ docker-data/
 stats.json
 *.sqlite
 *.sqlite-journal
+certs/

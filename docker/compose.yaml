@@ -36,6 +36,12 @@ services:
       SESSION_MAX_AGE_DAYS: "7"
     expose:
       - "4000"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:4000/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
 
   web:
     build:
@@ -49,6 +55,12 @@ services:
       NEXT_PUBLIC_API_BASE_URL: /api
     ports:
       - "3000:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://localhost:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
 
 volumes:
   postgres-data:
