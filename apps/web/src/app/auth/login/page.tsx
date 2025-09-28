@@ -36,7 +36,7 @@ export default function LoginPage() {
         return;
       }
 
-      router.push("/welcome");
+      router.push("/login-success");
     } catch {
       setError("Unable to sign in. Please try again.");
       setIsSubmitting(false);
