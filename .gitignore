@@ -1,0 +1,49 @@
+# --- OS / Editor ---
+.DS_Store
+.idea/
+.vscode/
+
+# --- Dependencies & Caches ---
+node_modules/
+.pnpm-store/
+.yarn/
+.pnp.cjs
+.pnp.loader.mjs
+.turbo/
+
+# --- Build Artifacts ---
+dist/
+build/
+.next/
+out/
+.vercel/
+*.tsbuildinfo
+
+# --- Logs & Reports ---
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+
+# --- Env & Secrets ---
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+.env.test
+!.env.example
+
+# --- Docker ---
+docker-data/
+.docker/
+
+# --- Misc ---
+stats.json
+*.sqlite
+*.sqlite-journal
