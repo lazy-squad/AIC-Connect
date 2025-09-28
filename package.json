@@ -14,7 +14,11 @@
     "test:api": "uv run --directory apps/api --extra dev -- pytest",
     "typecheck": "pnpm --filter web typecheck --if-present",
     "compose:up": "docker compose -f docker/compose.yaml up -d --build",
-    "compose:down": "docker compose -f docker/compose.yaml down -v"
+    "compose:down": "docker compose -f docker/compose.yaml down -v",
+    "demo:setup": "cd apps/api && uv run python scripts/create_demo_data.py",
+    "demo:clear": "cd apps/api && uv run python scripts/create_demo_data.py --clear",
+    "demo:verify": "cd apps/api && uv run python scripts/verify_implementation.py",
+    "demo:test-api": "cd apps/api && uv run python scripts/test_spaces_api.py"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

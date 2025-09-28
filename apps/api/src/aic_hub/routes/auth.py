@@ -102,7 +102,68 @@ def _decode_state(raw: str) -> str:
 
 
 def _to_public_user(user: User) -> PublicUser:
-  return PublicUser(id=user.id, email=user.email, displayName=user.display_name)
+  return PublicUser(
+    id=user.id,
+    email=user.email,
+    displayName=user.display_name,
+    username=user.username,
+    avatarUrl=user.avatar_url,
+    bio=user.bio,
+    company=user.company,
+    location=user.location,
+    expertiseTags=user.expertise_tags or [],
+    githubUsername=user.github_username,
+    createdAt=user.created_at,
+    articleCount=0,  # TODO: Count actual articles when articles are implemented
+    spaceCount=0,    # TODO: Count actual spaces when spaces are implemented
+  )
+
+
+async def _generate_unique_username(session: AsyncSession, preferred_username: str) -> str:
+  """Generate a unique username by appending numbers if needed."""
+  base_username = preferred_username
+  counter = 1
+
+  while True:
+    # Check if username is available
+    existing = await session.scalar(select(User).where(User.username == preferred_username))
+    if not existing:
+      return preferred_username
+
+    # Try with a number suffix
+    preferred_username = f"{base_username}{counter}"
+    counter += 1
+
+    # Safety limit to prevent infinite loops
+    if counter > 1000:
+      import secrets
+      preferred_username = f"{base_username}_{secrets.token_hex(4)}"
+      break
+
+  return preferred_username
+
+
+def _populate_github_profile_data(user: User, profile) -> None:
+  """Populate user with GitHub profile data if not already set."""
+  # Always update GitHub username
+  user.github_username = profile.login
+
+  # Set username if not already set (use GitHub login as default)
+  if not user.username:
+    user.username = profile.login  # Will be made unique in the callback
+
+  # Update other fields if not set or if they're from GitHub
+  if not user.avatar_url:
+    user.avatar_url = profile.avatar_url
+
+  if not user.bio:
+    user.bio = profile.bio
+
+  if not user.company:
+    user.company = profile.company
+
+  if not user.location:
+    user.location = profile.location
 
 
 @router.post("/signup", response_model=PublicUser, status_code=status.HTTP_201_CREATED)
@@ -427,7 +488,19 @@ async def github_callback(
       action = "oauth_linked"
     else:
       display_name = profile.name or profile.login
-      user = User(email=normalized_email, password_hash=None, display_name=display_name)
+      unique_username = await _generate_unique_username(session, profile.login)
+      user = User(
+        email=normalized_email,
+        password_hash=None,
+        display_name=display_name,
+        username=unique_username,
+        github_username=profile.login,
+        avatar_url=profile.avatar_url,
+        bio=profile.bio,
+        company=profile.company,
+        location=profile.location,
+        expertise_tags=[]
+      )
       session.add(user)
       await session.flush()
       oauth_account = OAuthAccount(
@@ -437,6 +510,13 @@ async def github_callback(
       )
       session.add(oauth_account)
       action = "oauth_created"
+
+  # Update existing user with latest GitHub data
+  _populate_github_profile_data(user, profile)
+
+  # Ensure username is unique if it was updated
+  if user.username and user.username == profile.login:
+    user.username = await _generate_unique_username(session, profile.login)
 
   user.last_login = datetime.now(tz=UTC)
   await session.flush()

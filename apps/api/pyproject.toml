@@ -18,7 +18,9 @@ dependencies = [
   "argon2-cffi>=25.1.0",
   "itsdangerous>=2.2.0",
   "httpx>=0.28.1",
-  "python-slugify>=8.0.1"
+  "python-slugify>=8.0.1",
+  "unidecode>=1.4.0",
+  "greenlet>=3.2.4",
 ]
 
 [project.optional-dependencies]

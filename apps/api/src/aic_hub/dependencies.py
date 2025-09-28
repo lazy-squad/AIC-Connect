@@ -26,3 +26,22 @@ async def get_current_user(
     raise HTTPException(status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
 
   return user
+
+
+async def get_current_user_required(
+  request: Request,
+  session: AsyncSession = Depends(get_db_session),
+) -> User:
+  """Alias for get_current_user for consistency"""
+  return await get_current_user(request, session)
+
+
+async def get_current_user_optional(
+  request: Request,
+  session: AsyncSession = Depends(get_db_session),
+) -> User | None:
+  """Returns current user if authenticated, None otherwise"""
+  try:
+    return await get_current_user(request, session)
+  except HTTPException:
+    return None

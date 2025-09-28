@@ -9,9 +9,15 @@ from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from .config import settings
 from .db import dispose_engine, verify_database_connection
+from .routes.articles import router as articles_router
 from .routes.auth import router as auth_router
+from .routes.feed import router as feed_router
 from .routes.health import router as health_router
 from .routes.me import router as me_router
+from .routes.search import router as search_router
+from .routes.spaces import router as spaces_router
+from .routes.tags import router as tags_router
+from .routes.users import router as users_router
 
 logger = logging.getLogger(__name__)
 
@@ -43,13 +49,19 @@ app.add_middleware(
   CORSMiddleware,
   allow_origins=settings.cors_origins,
   allow_credentials=True,
-  allow_methods=["GET", "POST", "OPTIONS"],
+  allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
   allow_headers=["Authorization", "Content-Type"],
 )
 
 app.include_router(health_router)
 app.include_router(auth_router)
 app.include_router(me_router)
+app.include_router(users_router)
+app.include_router(articles_router)
+app.include_router(spaces_router)
+app.include_router(tags_router)
+app.include_router(search_router)
+app.include_router(feed_router)
 
 
 @app.get("/config/cookie")

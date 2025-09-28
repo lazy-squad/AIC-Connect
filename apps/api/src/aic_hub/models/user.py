@@ -3,7 +3,8 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, String, func
+from sqlalchemy import DateTime, String, Text, func, Index
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..db import Base
@@ -19,10 +20,43 @@ class User(Base):
   display_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
   created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
   last_login: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+  updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), onupdate=func.now(), nullable=True)
+
+  # GitHub profile fields
+  username: Mapped[str | None] = mapped_column(String(50), unique=True, nullable=True, index=True)
+  github_username: Mapped[str | None] = mapped_column(String(50), nullable=True)
+  avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+  bio: Mapped[str | None] = mapped_column(Text, nullable=True)
+  company: Mapped[str | None] = mapped_column(String(100), nullable=True)
+  location: Mapped[str | None] = mapped_column(String(100), nullable=True)
+
+  # AI expertise tags
+  expertise_tags: Mapped[list[str]] = mapped_column(ARRAY(String), default=[], nullable=False)
 
   oauth_accounts = relationship(
     "OAuthAccount",
     back_populates="user",
     cascade="all, delete-orphan",
     lazy="selectin",
+  )
+
+  articles = relationship("Article", back_populates="author", lazy="select")
+
+  # Import space_members table at module level to avoid circular import
+  spaces = relationship(
+    "Space",
+    secondary="space_members",
+    back_populates="members",
+    lazy="select"
+  )
+
+  preferences = relationship(
+    "UserPreferences",
+    back_populates="user",
+    uselist=False,
+    lazy="select"
+  )
+
+  __table_args__ = (
+    Index('idx_user_expertise_tags', 'expertise_tags', postgresql_using='gin'),
   )

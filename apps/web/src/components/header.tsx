@@ -68,14 +68,45 @@ export function Header() {
   return (
     <header className="border-b border-slate-800 bg-slate-950/80">
       <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-6 py-4">
-        <Link href="/" className="text-sm font-semibold text-slate-200 hover:text-white">
-          AIC HUB
-        </Link>
+        <div className="flex items-center gap-6">
+          <Link href="/" className="text-sm font-semibold text-slate-200 hover:text-white">
+            AIC HUB
+          </Link>
+          <nav className="hidden md:flex items-center gap-4 text-sm">
+            <Link href="/articles" className="text-slate-300 hover:text-white">
+              Articles
+            </Link>
+            <Link href="/feed" className="text-slate-300 hover:text-white">
+              Feed
+            </Link>
+            <Link href="/spaces" className="text-slate-300 hover:text-white">
+              Spaces
+            </Link>
+          </nav>
+        </div>
 
         {isLoading ? (
           <span className="text-xs text-slate-500">Loading session…</span>
         ) : user ? (
           <div className="flex items-center gap-3 text-sm text-slate-200">
+            <Link
+              href="/articles/new"
+              className="text-slate-300 hover:text-white"
+            >
+              Write
+            </Link>
+            <Link
+              href="/drafts"
+              className="text-slate-300 hover:text-white"
+            >
+              My Drafts
+            </Link>
+            <Link
+              href="/spaces?my_spaces=true"
+              className="text-slate-300 hover:text-white"
+            >
+              My Spaces
+            </Link>
             <span>
               Signed in as {user.displayName?.trim() || user.email}
             </span>

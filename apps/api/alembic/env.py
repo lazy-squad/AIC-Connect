@@ -10,6 +10,8 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from aic_hub.config import settings
 from aic_hub.db import Base
+# Import all models to ensure they are registered with SQLAlchemy
+from aic_hub import models  # noqa: F401
 
 config = context.config
 

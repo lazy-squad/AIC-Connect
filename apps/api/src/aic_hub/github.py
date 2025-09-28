@@ -19,6 +19,10 @@ class GitHubProfile:
   email: str
   login: str
   name: str | None
+  avatar_url: str | None
+  bio: str | None
+  company: str | None
+  location: str | None
 
 
 class GitHubOAuthClient:
@@ -92,6 +96,10 @@ class GitHubOAuthClient:
       email=str(email),
       login=str(user_data.get("login")),
       name=user_data.get("name"),
+      avatar_url=user_data.get("avatar_url"),
+      bio=user_data.get("bio"),
+      company=user_data.get("company"),
+      location=user_data.get("location"),
     )
 
 
