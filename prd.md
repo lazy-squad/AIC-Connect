@@ -1,257 +1,397 @@
-# AIC HUB — Product Requirements Document (PRD)
+# Product Requirements Document: AI Collective Hub MVP
 
-> **Status:** Approved MVP scope • **Deploy target:** Single VM behind AWS ALB (HTTP first, HTTPS/ACM last) • **Audience:** Engineering, Product, Design, DevOps • **Doc type:** Planning (no code)
-
----
-
-## 0) Vision
-
-AIC HUB is a web‑first, installable community app (PWA) for the AI Collective ecosystem. It enables members to join, discover chapters via interests and location, view a global and local feed, and message one another in real time. Organizers get a lightweight dashboard for chapter health. The MVP is open‑source, packaged for Docker Compose, and deployable to a single VM fronted by an AWS Application Load Balancer (ALB). HTTPS via ACM is attached post‑MVP.
-
-**North‑star outcomes**
-
-* A single place where members connect with people, chapters, and events.
-* An opinionated, privacy‑respecting social layer that’s easy to adopt.
-* An organizer view that surfaces health signals without heavy ops.
+**Author:** AI Collective Team
+**Version:** 1.1
+**Date:** September 28, 2025
+**Status:** Approved MVP scope • **Deploy target:** Single VM behind AWS ALB (HTTP first, HTTPS/ACM last) • **Audience:** Engineering, Product, Design, DevOps
 
 ---
 
-## 1) Objectives & Non‑Goals
+## 1. Overview
 
-**Objectives (MVP)**
+### 1.1. Problem Statement
 
-1. Frictionless join via magic link; set interests and location.
-2. Chapter suggestions ranked by distance and interest overlap.
-3. Global and Local feeds with simple posting (text, image, link preview).
-4. In‑app 1:1 DMs with opt‑in and basic safety (block, visibility controls).
-5. Admin Dashboard (lite) with chapter health and CSV export.
-6. Lean architecture ready for future scale (partitioning, pooling, replicas).
+The AI Collective is a global, grassroots community of over 70,000 AI "pioneers"—founders, researchers, and investors—dedicated to steering AI's future towards trust and human flourishing. Currently, the invaluable insights generated in local chapter events and discussions are ephemeral. The community lacks a central, trusted digital hub to preserve knowledge, facilitate cross-chapter discovery of experts and content, and coordinate collaborative projects. This fragmentation hinders the Collective's mission to unite groups and bridge communication gaps on a global scale.
 
-**Non‑Goals (MVP)**
+### 1.2. Product Vision & MVP Goal
 
-* Native mobile apps, advanced moderation/E2EE, sponsor integrations, ALB access logs, SSO, or complex workflows (judge routing, check‑in).
+**Vision:** To create the definitive digital hub for the AI Collective, a platform that transforms a decentralized network of chapters into a cohesive global force for innovation and collaboration.
 
----
+**MVP Goal:** For this hackathon, our goal is to build a Minimum Viable Product (MVP) that demonstrates the core value proposition of a unified, high-trust platform. The MVP will focus on establishing a seamless user journey from onboarding to content creation, discovery, and the initiation of collaborative work, validating the concept of a central hub built on strategic integration rather than monolithic development.
 
-## 2) Stakeholders & Roles
+### 1.3. Target Audience
 
-* **Member**: join, set profile, discover chapters, post/read feeds, DM.
-* **Chapter Admin**: moderate posts/reports for their chapter; view chapter metrics.
-* **Global Admin**: org‑wide metrics; manage chapters; export CSV.
-* **Engineering**: build web, API, real‑time, and data layers.
-* **DevOps**: VM provisioning, ALB configuration, TLS rollout, backups.
-* **Design**: shadcn/ui + Radix implementation, responsive “luxury” style, accessibility.
+The primary users are the members of the AI Collective: AI founders, researchers, operators, and investors. This is a technically proficient audience that values efficiency, high signal-to-noise ratio, and verifiable expertise. They are active on professional platforms like GitHub and are likely to engage in deep, nuanced discussions.
+
+### 1.4. Guiding Principles
+
+- **Integrate, Don't Replicate:** Leverage best-in-class external tools for their core competencies (e.g., real-time chat, project management) and focus the Hub's value on aggregation and context.
+- **Velocity and Viability:** Prioritize features that can be implemented to a high standard within the hackathon's timeframe and which deliver immediate, tangible value to the user.
+- **Foundation for the Future:** Make architectural choices (e.g., API-first identity, headless CMS) that enable future scalability and prevent technical debt.
 
 ---
 
-## 3) Assumptions & Constraints
+## 2. MVP Feature Requirements
 
-* **Infrastructure**: Single VM, Docker Compose, fronted by **AWS ALB**. Start with **HTTP:80**, enable **HTTPS:443 + ACM** after MVP.
-* **WebSockets**: ALB supports WS; keep idle timeout default; app sends periodic pings.
-* **Data scope**: user‑provided data (email, name, avatar, interests, city/lat/lon, optional LinkedIn); chapter membership and posting activity. No geo residency limits.
-* **Privacy posture**: city‑level visibility by default; lat/lon not exposed to other users.
-* **Branding**: neutral OSS branding as **AIC HUB**.
+### 2.1. User Onboarding & Identity
 
----
+**User Story:** As a new member of the AI Collective, I want to sign up instantly using my existing professional identity so I can join the community with minimal friction and have a profile that reflects my expertise.
 
-## 4) Personas & Top Tasks
+| Requirement ID | Description                                                                                                                                                                                                                                                                                         | Priority    |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| ONB-01         | **GitHub Authentication:** The platform must use GitHub OAuth as the sole method for user registration and login. This establishes a high-trust, verified identity from the outset.                                                                                                                 | Must-Have   |
+| ONB-02         | **Profile Seeding:** Upon first authentication, the system must automatically fetch and populate the user's profile with publicly available data from the GitHub API (GET /user endpoint): Name, GitHub Username, Avatar, Company, Location.                                                        | Must-Have   |
+| ONB-03         | **Profile Enhancement:** After initial GitHub auth, users must be prompted to complete their platform-specific profile with: Professional Bio (rich text), AI Expertise Areas (from controlled taxonomy), Current Focus, Looking For (collaborators/advisors/funding), Publications/Projects links. | Must-Have   |
+| ONB-04         | **Local User Record:** A corresponding user record must be created and persisted in the platform's local database, storing both GitHub data and platform-specific profile data.                                                                                                                     | Must-Have   |
+| ONB-05         | **Profile Visibility Controls:** Users can set their profile visibility (public/community/hidden) and control who can contact them.                                                                                                                                                                 | Should-Have |
 
-**P1—New Member**: create account, set interests/location, join chapter, read local feed, DM a peer.
-**P2—Returning Member**: browse global feed, post an update, reply/like, discover a nearby chapter.
-**P3—Chapter Admin**: view activity trends, resolve a report, remove an off‑topic post, download CSV for outreach.
-**P4—Global Admin**: check org‑wide engagement, identify rising cities/interests, plan programming.
+### 2.2. Content Creation
 
-**Definition of success**
+**User Story:** As an expert in my field, I want a clean, powerful, and intuitive editor to write and format long-form articles, share my research, and contribute high-quality knowledge to the community.
 
-* Time‑to‑first‑post < 5 minutes.
-* 60% of new members accept at least one chapter suggestion.
-* Message delivery appears real‑time (< 1s perceived) on local stack.
-* Admins can answer “Is my chapter healthy this month?” at a glance.
+| Requirement ID | Description                                                                                                                                                                                                                                                     | Priority     |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| CON-01         | **Rich-Text Editor:** The platform must provide a modern, WYSIWYG rich-text editor for all content creation. The recommended implementation is Tiptap, a headless editor framework that offers maximum flexibility and a strong foundation for future features. | Must-Have    |
+| CON-02         | **Core Formatting Tools:** The editor must support essential formatting options, including: Headings (H1-H3), Bold, Italic, Unordered (bullet) lists, Ordered (numbered) lists, Blockquotes, Code blocks, and Hyperlinks.                                       | Must-Have    |
+| CON-03         | **Structured Content Storage:** The editor's output must be saved to the database in a structured JSON format, not raw HTML. This is critical for data integrity, future search indexing, and content portability.                                              | Must-Have    |
+| CON-04         | **Media Support:** Support for image uploads with object storage (S3) and automatic generation of pre-signed URLs.                                                                                                                                              | Should-Have  |
+| CON-05         | **Link Previews:** Automatic Open Graph metadata fetching for embedded links.                                                                                                                                                                                   | Nice-to-Have |
 
----
+### 2.3. Content & User Discovery
 
-## 5) Functional Requirements
+**User Story:** As a member, I want to easily find content relevant to my specific interests (like Large Language Models) and discover other experts within the community to follow and learn from.
 
-### 5.1 Authentication & Profile
+| Requirement ID | Description                                                                                                                                                                                                                                                   | Priority    |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| DIS-01         | **Tag-Based System:** All content must be classifiable with tags. A tag-based system is flexible and user-intuitive for filtering.                                                                                                                            | Must-Have   |
+| DIS-02         | **Controlled Taxonomy:** For the MVP, the system will use a predefined, centrally managed list of AI-specific tags (e.g., "LLM Agents", "Computer Vision", "AI Safety", "Data Engineering"). This prevents tag duplication and ensures filtering reliability. | Must-Have   |
+| DIS-03         | **Content Filtering:** The main content feed must be filterable by one or more tags, allowing users to narrow down the content to their specific interests.                                                                                                   | Must-Have   |
+| DIS-04         | **Feed Types:** Two feed views: Global Feed (all public content, chronological) and Personalized Feed (filtered by user's selected expertise areas).                                                                                                          | Must-Have   |
+| DIS-05         | **User Directory:** A searchable member directory allowing discovery by name, expertise areas, location, or current focus.                                                                                                                                    | Must-Have   |
+| DIS-06         | **Public User Profiles:** Clicking on a user's name anywhere leads to their profile page, displaying both GitHub-sourced and platform-specific information.                                                                                                   | Must-Have   |
+| DIS-07         | **Chapter Discovery:** Suggestions for local AI Collective chapters based on user location (city-level) and interest overlap.                                                                                                                                 | Should-Have |
 
-* Passwordless email sign‑in (magic link).
-* Profile fields: display name, avatar, optional LinkedIn URL, interests (tags), city/lat/lon, visibility (public/community/hidden), DM opt‑in.
-* Controls: show/hide profile to others; allow DMs; block specific users.
+### 2.4. Collaboration Spaces
 
-### 5.2 Chapter Suggestions
+**User Story:** As a project lead, I want to create a dedicated space for my initiative where I can aggregate all relevant resources—like our Slack channel, GitHub repo, and Notion docs—into a single, shareable dashboard for my team.
 
-* Inputs: user city/lat/lon, selected interests, basic chapter activity score.
-* Ranking: distance (Haversine) + shared‑interest score + recent chapter activity.
-* UX: suggestions list with “Join” and “Save for later”; show rationale (e.g., “2 shared interests · 5 km”).
+| Requirement ID | Description                                                                                                                                                                                                                                                                                                                                                                                                                                        | Priority    |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| COL-01         | **Space Creation:** Users must be able to create a "Collaboration Space" with a unique title, description, and tags.                                                                                                                                                                                                                                                                                                                               | Must-Have   |
+| COL-02         | **Deep Link Aggregation:** Within a Space, users must be able to add, edit, and delete links to external resources. The system must support deep links that point to specific content within other applications.                                                                                                                                                                                                                                   | Must-Have   |
+| COL-03         | **Supported Link Types:** The MVP will demonstrate support for deep links from key collaboration tools:<br>• **Slack:** Links to specific channels or DMs (e.g., `slack://channel?team={TEAM_ID}&id={CHANNEL_ID}`)<br>• **GitHub:** Permanent links to specific files, lines of code, or commits using the commit SHA<br>• **Notion:** Links to specific pages or content blocks<br>• **Generic:** Any HTTPS URL with automatic Open Graph preview | Must-Have   |
+| COL-04         | **Link Metadata:** Each added link must store the URL, user-provided title, description, and auto-fetched preview data where available.                                                                                                                                                                                                                                                                                                            | Must-Have   |
+| COL-05         | **Space Members:** Ability to add other users as members of a collaboration space.                                                                                                                                                                                                                                                                                                                                                                 | Should-Have |
 
-### 5.3 Feeds & Posts
+### 2.5. Progressive Web App (PWA)
 
-* **Global feed**: public posts across the network (rate‑limited; paginated).
-* **Local feed**: posts from joined and nearby chapters.
-* Post types: text, image (uploaded to object storage), link preview (Open Graph).
-* Interactions: like; simple replies (optional toggle); report (sends to AuditLog).
-* Offline behavior: shell available; last N posts cached for read‑only.
+**User Story:** As a mobile user, I want to install the Hub on my device and access content even when connectivity is poor.
 
-### 5.4 Direct Messages (DMs)
+| Requirement ID | Description                                                                                               | Priority    |
+| -------------- | --------------------------------------------------------------------------------------------------------- | ----------- |
+| PWA-01         | **Installability:** The application must be installable as a PWA with proper manifest.json configuration. | Must-Have   |
+| PWA-02         | **Offline Support:** Cache recent feed content for offline reading using Service Workers.                 | Should-Have |
+| PWA-03         | **Responsive Design:** Fully responsive UI that works seamlessly on mobile, tablet, and desktop.          | Must-Have   |
 
-* 1:1 in‑app messaging over WebSockets; online presence (basic).
-* Safety: opt‑in DMs, block user, hide profile.
-* Delivery semantics: best‑effort fan‑out; client shows send/seen states; reconnect and re‑fetch window on resume.
+### 2.6. Admin Dashboard (Lite)
 
-### 5.5 Admin Dashboard (Lite)
+**User Story:** As a community organizer, I want to see engagement metrics and export data for outreach.
 
-* Chapter Health: actives (7/30d), new joins, posts/day, DM starts.
-* Growth: top cities, interest heatmap, chapter comparisons.
-* Data handling: non‑PII by default; no per‑user drill‑down in MVP.
-* Export: CSV of aggregate metrics and chapter rosters (where consented).
-
-### 5.6 Accessibility & Internationalization
-
-* Target **WCAG 2.2 AA** with Radix focus mgmt and ARIA patterns.
-* English first; copy structured for future i18n.
-
----
-
-## 6) Information Architecture
-
-**Core entities**
-
-* **User**: identity, profile, preferences, visibility, DM settings.
-* **InterestTag**: canonical interest label (e.g., “LLM Agents”, “Data Viz”).
-* **Chapter**: geo point (city/lat/lon), name, slug, activity score.
-* **Membership**: user ↔ chapter relationship + role (member|chapter_admin).
-* **Role**: global_admin flag at user level.
-* **Post**: author, optional chapter scope, body, media metadata, OG metadata, visibility, timestamps.
-* **Conversation**: pairwise thread between two users.
-* **Message**: body, sender, timestamps, delivery metadata.
-* **AuditLog**: actor, action, target, timestamp for security and moderation.
-
-**Key relationships**
-
-* User ↔ Membership ↔ Chapter (many‑to‑many).
-* User ↔ InterestTag (many‑to‑many).
-* User ↔ Post (one‑to‑many), Chapter ↔ Post (optional one‑to‑many).
-* Conversation ↔ Message (one‑to‑many).
-
-**Data retention & deletion**
-
-* Users can delete posts and disable DMs. Account deletion removes profile and DMs; posts may be anonymized for aggregate metrics.
+| Requirement ID | Description                                                                                                                     | Priority     |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| ADM-01         | **Engagement Metrics:** View platform-wide metrics: active users (7/30d), new signups, posts/day, collaboration spaces created. | Should-Have  |
+| ADM-02         | **Content Insights:** Top tags, trending articles, most active collaboration spaces.                                            | Should-Have  |
+| ADM-03         | **Chapter Health:** For chapter organizers: member count, activity trends, top contributors.                                    | Nice-to-Have |
+| ADM-04         | **CSV Export:** Export aggregate metrics and user lists (where consented) for outreach.                                         | Should-Have  |
 
 ---
 
-## 7) System Architecture (Narrative)
+## 3. Non-Goals for MVP
 
-* **Frontend**: Next.js (App Router) PWA using shadcn/ui (Radix primitives + Tailwind); responsive, accessible, themeable.
-* **Backend**: Node/TypeScript API for CRUD + real‑time WS gateway. JSON payloads with schema validation.
-* **Storage**: PostgreSQL 16 for primary data; design tables to support future partitioning (e.g., posts/messages by time). Redis for caching/sessions and Pub/Sub for real‑time fan‑out.
-* **Media**: Object storage for images (e.g., S3) with pre‑signed URLs; thumbnails generated server‑side or deferred post‑MVP.
-* **Topology**: Browser → AWS ALB → VM (Compose services). ALB terminates HTTP (add HTTPS w/ ACM later). WebSocket upgrade flows through ALB to the API. Keep ALB idle timeout default; clients send WS pings periodically.
+To ensure focus and deliver a polished core product within the hackathon timeline, the following features are explicitly out of scope for the MVP:
 
----
-
-## 8) Deployment & Operations (MVP)
-
-* **Environments**: Local (Compose), Staging (optional), Production (single VM).
-* **Ingress**: ALB public DNS; HTTP:80 initially. Post‑MVP: add HTTPS:443 listener with ACM; redirect HTTP→HTTPS if desired.
-* **Secrets**: environment variables for database, cache, mail, and storage credentials (rotation plan post‑MVP).
-* **Backups**: daily database snapshot plan; media stored durably in object storage.
-* **Runbooks**: start/stop stack, health verification (feed, post, DM echo), simple troubleshooting (logs, WS connectivity, storage reachability).
+- **Algorithmic Feeds:** No complex ML-based "For You" recommendations. Feeds are chronological with tag filtering.
+- **Reputation System:** No karma, points, or credibility scores.
+- **Direct Messaging:** No private 1-to-1 or group messaging within the platform.
+- **Real-time Collaboration:** The Tiptap editor will be single-user only. No collaborative editing.
+- **Email Notifications:** No email notification system beyond authentication magic links.
+- **Native Collaboration Tools:** No built-in Kanban boards, chat, or document storage.
+- **Advanced Moderation:** No AI-powered content moderation or complex review workflows.
+- **Payment Integration:** No paid tiers, sponsorships, or financial transactions.
+- **Mobile Apps:** Web-first PWA only, no native iOS/Android apps.
 
 ---
 
-## 9) Security & Privacy
+## 4. Success Metrics
 
-**Baseline (MVP)**
+The success of the MVP will be measured by its ability to achieve the following within the hackathon context:
 
-* OWASP ASVS L1 controls: auth/session integrity, input validation, output encoding, rate limiting, logging of auth/admin actions.
-* Security headers: HSTS (after HTTPS), CSP (report‑only at first), X‑Content‑Type‑Options, X‑Frame‑Options, Permissions‑Policy.
-* Access controls: RBAC (member, chapter_admin, global_admin). Role checks enforced server‑side.
-* Privacy: explicit DM opt‑in; city‑level visibility by default; no raw coords shared with other users.
+**Primary Metric:** A successful end-to-end demonstration of the core user flow:
 
-**Backlog (post‑MVP)**
+1. User onboards via GitHub OAuth
+2. User enhances profile with AI-specific information
+3. User creates a formatted article using the rich-text editor and applies tags
+4. User creates a Collaboration Space and adds deep links to external resources
+5. Another user discovers the content and author's profile via tag filtering and search
+6. Users can install the PWA and access content offline
 
-* Connection pooling (PgBouncer), read replica, table partitioning.
-* Moderation queue, abuse heuristics, spam throttles.
-* Secrets management, key rotation, CSP enforcement, signed downloads by role.
+**Secondary Metrics:**
 
----
-
-## 10) Metrics & KPIs
-
-* **Activation**: % completing profile; time to first post; chapter join rate.
-* **Engagement**: DAU/WAU/MAU; posts per user; DM starts per day; like rate.
-* **Chapter health**: actives 7/30d; RSVP click‑outs (if integrated later); new joins.
-* **Quality signals**: report rate; block rate; retention (week‑over‑week).
+- **Time to First Post:** < 5 minutes from signup
+- **Profile Completion Rate:** > 60% add bio and expertise areas
+- **Content Discovery:** Users find relevant content within 3 clicks
+- **Architectural Soundness:** Clean separation of concerns, scalable data model
+- **Accessibility Score:** WCAG 2.2 AA compliance on core flows
 
 ---
 
-## 11) Acceptance Criteria (Demo‑ready)
+## 5. Information Architecture
 
-1. A new user can join via magic link, set interests and city, and see **≥3** chapter suggestions with rationale.
-2. Global and Local feeds render, paginate, and accept new posts (text, image, link preview).
-3. Two distinct users can exchange DMs in real time via ALB, with basic presence and block capability.
-4. Admin Dashboard shows non‑PII chapter metrics and supports a CSV export.
-5. PWA is installable (manifest present) and caches a small set of recent posts for offline read.
+### Core Entities
 
----
+- **User:** GitHub ID, name, avatar, company, location, bio, expertise_areas, current_focus, looking_for, profile_visibility
+- **InterestTag:** Controlled taxonomy of AI-related topics
+- **Article:** author_id, title, content_json, tags, created_at, updated_at, view_count
+- **CollaborationSpace:** owner_id, title, description, tags, member_ids, created_at
+- **ExternalLink:** space_id, url, title, description, link_type, og_preview_data
+- **Chapter:** name, slug, city, lat, lon, activity_score
+- **Membership:** user_id, chapter_id, role, joined_at
+- **AuditLog:** actor_id, action, target_type, target_id, timestamp, ip_address
 
-## 12) Testing Strategy (Planning)
+### Key Relationships
 
-* **Unit**: entity validation, ranking logic, feed pagination rules, WS message schema.
-* **Integration**: auth flow (magic link), posting with OG preview, DM persistence and reconnection behavior.
-* **E2E**: join → personalize → suggest → post → DM → admin metrics → export.
-* **Accessibility**: keyboard navigation, landmarks, color contrast, focus visibility.
-* **Performance**: measure P50/P95 feed reads and DM RTT under nominal dev load.
-
----
-
-## 13) Risks & Mitigations
-
-* **Realtime message loss (at‑most‑once)**: show transient state, fetch recent window after reconnect, allow user resend.
-* **Spam/abuse on global feed**: rate limits, cooldowns, quick report, admin removal.
-* **OG scraping latency**: strict timeouts and allowlist; degrade gracefully if preview fails.
-* **Single‑VM limits**: set expectations; plan PgBouncer/replicas/partitions in roadmap.
+- User ↔ Article (one-to-many, author)
+- User ↔ InterestTag (many-to-many, expertise)
+- Article ↔ InterestTag (many-to-many, categorization)
+- User ↔ CollaborationSpace (one-to-many as owner, many-to-many as member)
+- CollaborationSpace ↔ ExternalLink (one-to-many)
+- User ↔ Chapter ↔ Membership (many-to-many with role)
 
 ---
 
-## 14) Roadmap
+## 6. System Architecture
 
-* **MVP (Hackathon)**: full flow + Admin lite + PWA installability + VM/ALB HTTP.
-* **M2 (Post‑MVP)**: HTTPS w/ ACM; PgBouncer; moderation queue; analytics polish; image thumbnailing.
-* **M3 (Scale)**: read replica; partitions; vector search for matchmaking; events/check‑in; SSO; EKS migration path.
+### Technology Stack
+
+- **Frontend:**
+
+  - Next.js 14+ (App Router) with TypeScript
+  - shadcn/ui components (Radix UI + Tailwind CSS)
+  - Tiptap editor for rich text
+  - SWR or React Query for data fetching
+  - Service Workers for PWA/offline support
+
+- **Backend:**
+
+  - Python with FastAPI
+  - Pydantic for automatic data validation and serialization
+  - WebSocket support for real-time features (future)
+  - Async/await for high performance
+
+- **Database & Storage:**
+
+  - PostgreSQL 16 (primary database)
+  - Redis (session cache, rate limiting)
+  - S3-compatible object storage (images, attachments)
+
+- **Infrastructure:**
+  - Docker Compose for local development and deployment
+  - Single VM deployment initially
+  - AWS ALB for load balancing and SSL termination
+  - GitHub Actions for CI/CD
+
+### API Design
+
+RESTful API with JSON payloads:
+
+- `GET/POST /api/auth/github/*` - GitHub OAuth flow
+- `GET/PATCH /api/users/{id}` - User profiles
+- `GET/POST /api/articles` - Article CRUD
+- `GET /api/articles?tags=tag1,tag2` - Filtered content
+- `GET/POST /api/spaces` - Collaboration spaces
+- `POST /api/spaces/{id}/links` - Add external links
+- `GET /api/feed/global` - Global content feed
+- `GET /api/feed/personalized` - User's filtered feed
 
 ---
 
-## 15) Launch & Demo Plan
+## 7. Security & Privacy
 
-* Seed dataset (chapters, users, interests, posts, conversations) for consistent demos.
-* 90‑second script: join → suggest → local post → DM → admin metrics → CSV.
-* Post‑demo checklist: HTTPS enablement, performance pass, backlog triage.
+### Baseline (MVP)
+
+- **Authentication:** GitHub OAuth 2.0 exclusive
+- **Authorization:** Simple RBAC (member, chapter_admin, global_admin)
+- **Data Protection:**
+  - OWASP ASVS L1 controls
+  - Input validation with Pydantic models
+  - SQL injection prevention via SQLAlchemy ORM/parameterized queries
+  - XSS protection via React's default escaping
+- **Security Headers:**
+  - CSP (Content Security Policy)
+  - HSTS (after HTTPS enabled)
+  - X-Frame-Options: DENY
+  - X-Content-Type-Options: nosniff
+- **Rate Limiting:** API rate limits per user (Redis-based)
+- **Privacy:**
+  - City-level location only (no exact coordinates shown)
+  - Profile visibility controls
+  - GDPR-compliant data export/deletion
+
+### Post-MVP Enhancements
+
+- Connection pooling (PgBouncer)
+- Read replicas for scale
+- E2E encryption for future DMs
+- Advanced threat detection
+- SOC2 compliance roadmap
 
 ---
 
-## 16) Governance & Ways of Working
+## 8. Deployment & Operations
 
-* **Change control**: maintain a lightweight decision log in the repo.
-* **Design reviews**: UI/UX review against accessibility and style checklist.
-* **Security reviews**: pre‑release header check, auth/session review.
-* **Ops**: simple on‑call rotation (during hackathon), incident notes in repo.
+### Environments
+
+- **Local:** Docker Compose with hot reload
+- **Staging:** Optional, same stack as production
+- **Production:** Single VM initially, with growth path to Kubernetes
+
+### Infrastructure Setup
+
+```
+Internet → AWS ALB (HTTP:80 initially)
+         ↓
+    VM (Docker Compose)
+    - Next.js App (port 3000)
+    - FastAPI Server (port 8000)
+    - PostgreSQL (port 5432)
+    - Redis (port 6379)
+```
+
+### Deployment Process
+
+1. GitHub Actions triggered on main branch push
+2. Build Docker images
+3. Push to registry
+4. SSH to VM and pull new images
+5. Docker Compose up with zero-downtime deployment
+6. Run migrations if needed
+7. Health check verification
+
+### Monitoring & Backups
+
+- Application logs to CloudWatch/Datadog
+- Daily PostgreSQL backups to S3
+- Uptime monitoring via Pingdom/UptimeRobot
+- Error tracking with Sentry
 
 ---
 
-## 17) Glossary
+## 9. Testing Strategy
 
-* **Global feed**: network‑wide public posts.
-* **Local feed**: posts scoped to user’s joined/nearby chapters.
-* **DM**: direct message between two members.
-* **Chapter health**: aggregate engagement metrics over 7/30 days.
+### Test Coverage Goals
+
+- Unit tests: 70% coverage on business logic
+- Integration tests: Critical user flows
+- E2E tests: Happy path for core features
+
+### Test Types
+
+- **Unit:** Pytest for Python backend, Jest for frontend TypeScript
+- **Integration:** API endpoint testing with pytest + httpx TestClient
+- **E2E:** Playwright for critical user journeys
+- **Accessibility:** axe-core automated testing + manual screen reader testing
+- **Performance:** Lighthouse CI for performance budgets
 
 ---
 
-## 18) Decisions (to date)
+## 10. Roadmap
 
-* ALB first on HTTP:80; HTTPS/ACM added post‑MVP.
-* No ALB access logs in MVP; rely on app logs.
-* No geo limits; city‑level visibility only.
-* DMs strictly in‑app; no SMS/email relays.
-* Neutral OSS branding as **AIC HUB**.
+### MVP (Hackathon - 48 hours)
+
+- ✓ GitHub OAuth authentication
+- ✓ Profile creation and enhancement
+- ✓ Tiptap article editor
+- ✓ Tag-based content discovery
+- ✓ Collaboration spaces with deep links
+- ✓ Basic PWA setup
+- ✓ Docker Compose deployment
+
+### M2 (Week 1-2 Post-Hackathon)
+
+- HTTPS with ACM certificate
+- Admin dashboard with metrics
+- Enhanced search (PostgreSQL full-text)
+- Email notifications
+- Performance optimizations
+- Bug fixes from user feedback
+
+### M3 (Month 1-2)
+
+- Real-time collaboration features
+- Advanced moderation tools
+- API for third-party integrations
+- Chapter event management
+- Mobile app considerations
+- Scale to multiple VMs/Kubernetes
+
+### M4 (Month 3+)
+
+- ML-powered content recommendations
+- Video content support
+- Advanced analytics
+- Sponsor marketplace
+- Global expansion features
+
+---
+
+## 11. Acceptance Criteria
+
+The MVP is considered complete when:
+
+1. **Authentication Flow:** Users can sign up and sign in via GitHub OAuth
+2. **Profile Completion:** Users can enhance their profile with AI-specific information
+3. **Content Creation:** Users can create rich-text articles with formatting and tags
+4. **Content Discovery:** Users can browse global feed and filter by tags
+5. **User Discovery:** Users can search for and view other member profiles
+6. **Collaboration Spaces:** Users can create spaces and aggregate external links
+7. **PWA Features:** App is installable and shows cached content offline
+8. **Responsive Design:** UI works on mobile, tablet, and desktop
+9. **Performance:** Page loads < 3s on 3G connection
+10. **Accessibility:** Keyboard navigable with screen reader support
+
+---
+
+## 12. Risks & Mitigations
+
+| Risk                     | Impact | Probability | Mitigation                                    |
+| ------------------------ | ------ | ----------- | --------------------------------------------- |
+| GitHub API rate limits   | High   | Medium      | Implement caching, request higher limits      |
+| Tiptap editor complexity | Medium | Low         | Start with basic features, extensive testing  |
+| Deep link validation     | Low    | Medium      | Strict URL parsing, graceful fallbacks        |
+| Single VM scalability    | High   | High        | Clear architecture for horizontal scaling     |
+| Data privacy concerns    | High   | Low         | Clear privacy policy, minimal data collection |
+| Low initial adoption     | High   | Medium      | Seed content, onboard key influencers         |
+
+---
+
+## 13. Glossary
+
+- **AI Collective:** Global community of AI pioneers
+- **Chapter:** Local geographic group within the AI Collective
+- **Collaboration Space:** Project dashboard aggregating external resources
+- **Deep Link:** URL pointing to specific content within an external application
+- **Interest Tag:** Controlled vocabulary term for categorizing content and expertise
+- **PWA:** Progressive Web App, installable web application with offline support
+
+---
+
+## 14. References
+
+1. World's Largest AI Community - https://www.aicollective.com/
+2. GitHub OAuth Documentation - https://docs.github.com/en/rest/authentication
+3. Tiptap Editor Framework - https://github.com/ueberdosis/tiptap
+4. shadcn/ui Components - https://ui.shadcn.com/
+5. Next.js App Router - https://nextjs.org/docs/app
+6. PostgreSQL Full-Text Search - https://www.postgresql.org/docs/current/textsearch.html
+7. AWS Application Load Balancer - https://docs.aws.amazon.com/elasticloadbalancing/
+8. WCAG 2.2 Guidelines - https://www.w3.org/WAI/WCAG22/quickref/
