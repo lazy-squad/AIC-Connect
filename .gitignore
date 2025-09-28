@@ -18,6 +18,8 @@ build/
 out/
 .vercel/
 *.tsbuildinfo
+__pycache__/
+*.pyc
 
 # --- Logs & Reports ---
 logs/
@@ -47,3 +49,4 @@ docker-data/
 stats.json
 *.sqlite
 *.sqlite-journal
+certs/

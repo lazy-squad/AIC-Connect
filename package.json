@@ -1,0 +1,22 @@
+{
+  "name": "aic-hub",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@9.0.0",
+  "scripts": {
+    "dev": "concurrently -k \"pnpm dev:api\" \"pnpm dev:web\"",
+    "dev:web": "pnpm --filter web dev",
+    "dev:api": "uv run --directory apps/api -- uvicorn aic_hub.main:app --reload --host 0.0.0.0 --port 4000",
+    "build": "pnpm --filter web build --if-present",
+    "lint": "pnpm --filter web lint --if-present",
+    "format": "pnpm --filter web format --if-present",
+    "test": "pnpm --filter web test --if-present && pnpm test:api",
+    "test:api": "uv run --directory apps/api --extra dev -- pytest",
+    "typecheck": "pnpm --filter web typecheck --if-present",
+    "compose:up": "docker compose -f docker/compose.yaml up -d --build",
+    "compose:down": "docker compose -f docker/compose.yaml down -v"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
