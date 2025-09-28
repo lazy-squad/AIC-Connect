@@ -1,0 +1,55 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: aic-hub-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: aic_hub
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  api:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    container_name: aic-hub-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/aic_hub
+      WEB_BASE_URL: http://localhost:3000
+      API_BASE_URL: http://localhost:3000
+      ALLOWED_ORIGIN: http://localhost:3000
+      SECRET_KEY: change-me
+      TOKEN_EXP_MINUTES: "15"
+      SESSION_MAX_AGE_DAYS: "7"
+    expose:
+      - "4000"
+
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+    container_name: aic-hub-web
+    depends_on:
+      - api
+    environment:
+      API_INTERNAL_URL: http://api:4000
+      NEXT_PUBLIC_API_BASE_URL: /api
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres-data:
+    name: aic-hub-postgres-data

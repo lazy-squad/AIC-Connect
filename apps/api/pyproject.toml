@@ -1,0 +1,36 @@
+[project]
+name = "aic-hub-api"
+version = "0.1.0"
+description = "FastAPI backend for AIC HUB onboarding"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.111.0",
+  "uvicorn[standard]>=0.30.0",
+  "pydantic>=2.7.0",
+  "pydantic-settings>=2.3.0",
+  "sqlalchemy>=2.0.29",
+  "asyncpg>=0.29.0",
+  "alembic>=1.13.1",
+  "authlib>=1.3.0",
+  "email-validator>=2.0.0",
+  "python-dotenv>=1.0.1"
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.2.0",
+  "pytest-asyncio>=0.23.7",
+  "httpx>=0.27.0",
+  "anyio>=4.3.0"
+]
+
+[build-system]
+requires = ["hatchling>=1.21.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/aic_hub"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/aic_hub"]

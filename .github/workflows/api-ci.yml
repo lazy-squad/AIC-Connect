@@ -1,0 +1,35 @@
+name: API CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    env:
+      WEB_BASE_URL: http://localhost:3000
+      API_BASE_URL: http://localhost:3000
+      ALLOWED_ORIGIN: http://localhost:3000
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/aic_hub
+      SECRET_KEY: change-me
+      TOKEN_EXP_MINUTES: "15"
+      SESSION_MAX_AGE_DAYS: "7"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+
+      - name: Run pytest
+        run: uv run --directory apps/api -- pytest -q
